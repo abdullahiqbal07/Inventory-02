@@ -92,7 +92,7 @@ const sendAutomatedEmail = async (emailHtml, poNumber) => {
     });
     const info = await transporter.sendMail({
       from: `"BeHope" <${process.env.EMAIL}>`,
-      to: ["abdullah@behope.ca", "haroon@behope.ca", "hader@behope.ca"], 
+      to: ["abdullah@behope.ca", "haroon@behope.ca"], 
       subject: `Order Request for Account #62317 - PO ${poNumber}`,
       html: emailHtml,
     });
