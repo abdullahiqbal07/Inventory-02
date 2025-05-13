@@ -13,6 +13,11 @@
       "methods": ["POST"]
     },
     {
+      "src": "/api/webhooks/orders/create",
+      "dest": "/api/webhooks/orders/create",
+      "methods": ["POST"]
+    },
+    {
       "src": "/(.*)",
       "status": 404,
       "dest": "/api/404.js"
