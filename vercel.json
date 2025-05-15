@@ -11,6 +11,11 @@
       "src": "/webhook/orders/create",
       "dest": "/api/webhook/orders/create.js",
       "methods": ["POST"]
+    },
+    {
+      "src": "/test-email",
+      "dest": "/api/test-email.js",
+      "methods": ["GET"]
     }
   ]
 }
