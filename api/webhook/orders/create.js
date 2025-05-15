@@ -33,7 +33,7 @@ export default async function handler(req, res) {
 
   try {
 
-    // Verify Shopify HMAC
+    // Verify Shopify HMAC  
     // const hmacHeader = req.headers['x-shopify-hmac-sha256'];
     const hmacHeader = req.headers['x-shopify-hmac-sha256'];
 
