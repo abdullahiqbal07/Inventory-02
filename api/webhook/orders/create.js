@@ -4,11 +4,13 @@ import {
   getWarehouseType,
   getProductSupplier,
   updateOrderTags
-} from '../../../lib/shopify.js';
-import { sendAutomatedEmail, generateEmailHtml } from '../../../lib/email.js';
+} from '../../../lib/shopify.js';  // This path may need adjustment
+import { sendAutomatedEmail, generateEmailHtml } from '../../../lib/email.js';  // This path may need adjustment
 
 dotenv.config();
-const SHOPIFY_SECRET = process.env.SHOPIFY_WEBHOOK_SECRET;
+
+dotenv.config();
+// const SHOPIFY_SECRET = process.env.SHOPIFY_WEBHOOK_SECRET;
 
 // Helper function to determine if email should be sent
 function shouldSendEmail(warehouseType, supplier, shippingCountry) {
