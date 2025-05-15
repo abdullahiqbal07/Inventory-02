@@ -4,13 +4,11 @@ import {
   getWarehouseType,
   getProductSupplier,
   updateOrderTags
-} from '../../../lib/shopify.js';  // This path may need adjustment
-import { sendAutomatedEmail, generateEmailHtml } from '../../../lib/email.js';  // This path may need adjustment
+} from '../../../lib/shopify.js';
+import { sendAutomatedEmail, generateEmailHtml } from '../../../lib/email.js';
 
 dotenv.config();
-
-dotenv.config();
-// const SHOPIFY_SECRET = process.env.SHOPIFY_WEBHOOK_SECRET;
+const SHOPIFY_SECRET = process.env.SHOPIFY_WEBHOOK_SECRET;
 
 // Helper function to determine if email should be sent
 function shouldSendEmail(warehouseType, supplier, shippingCountry) {
@@ -24,10 +22,7 @@ function shouldSendEmail(warehouseType, supplier, shippingCountry) {
 
 export default async function handler(req, res) {
 
-  console.log('Webhook received');
-  console.log('Headers:', req.headers);
-  console.log('Body type:', typeof req.body);
-
+  
   // Only allow POST method for webhooks
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -35,7 +30,7 @@ export default async function handler(req, res) {
 
   try {
 
-    // Verify Shopify HMAC  
+    // Verify Shopify HMAC
     // const hmacHeader = req.headers['x-shopify-hmac-sha256'];
     const hmacHeader = req.headers['x-shopify-hmac-sha256'];
 
@@ -64,7 +59,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized - Invalid HMAC' });
     }
 
-    const order = req.body;
+    const order = body;
     console.log('Order received:', order.id);
 
     // Return 200 response quickly to Shopify
