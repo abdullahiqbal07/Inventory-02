@@ -62,7 +62,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized - Invalid HMAC' });
     }
 
-    const order = body;
+    const order = req.body;
     console.log('Order received:', order.id);
 
     // Return 200 response quickly to Shopify
