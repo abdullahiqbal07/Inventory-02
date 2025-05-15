@@ -1,9 +1,9 @@
 import crypto from 'crypto';
 import dotenv from 'dotenv';
-import {
-  getWarehouseType,
-  getProductSupplier,
-  updateOrderTags
+import { 
+  getWarehouseType, 
+  getProductSupplier, 
+  updateOrderTags 
 } from '../../../lib/shopify.js';
 import { sendAutomatedEmail, generateEmailHtml } from '../../../lib/email.js';
 
@@ -27,36 +27,31 @@ export default async function handler(req, res) {
   }
 
   try {
-
-    // Verify Shopify HMAC
     // Verify Shopify HMAC
     const hmacHeader = req.headers['x-shopify-hmac-sha256'];
-
-    // For Vercel, we need to handle the HMAC verification differently
-    // We need to get the raw body string for HMAC verification
-    let rawBody;
-
-    // If req.body is already parsed as JSON by Vercel
-    if (typeof req.body === 'object') {
-      rawBody = JSON.stringify(req.body);
-    } else if (Buffer.isBuffer(req.body)) {
-      // If body is a buffer (might happen in some cases)
-      rawBody = req.body.toString('utf8');
-    } else {
-      // If body is a string
-      rawBody = req.body;
-    }
-
+    const body = req.body; // Vercel automatically parses JSON by default
+    
+    // For HMAC verification, we need the raw body
+    const rawBody = JSON.stringify(body);
+    
     const generatedHmac = crypto
-      .createHmac('sha256', process.env.SHOPIFY_WEBHOOK_SECRET)
+      .createHmac('sha256', SHOPIFY_SECRET)
       .update(rawBody, 'utf8')
       .digest('base64');
-
+      
     if (generatedHmac !== hmacHeader) {
-      console.log('HMAC verification failed');
-      console.log('Expected:', hmacHeader);
-      console.log('Generated:', generatedHmac);
       return res.status(401).json({ error: 'Unauthorized - Invalid HMAC' });
+    }
+
+    const order = body;
+    console.log('Order received:', order.id);
+
+    // Return 200 response quickly to Shopify
+    res.status(200).json({ message: 'Webhook received' });
+
+    if (order.line_items.length > 1) {
+      console.log('Order contains multiple SKUs - processing manually');
+      return;
     }
 
     // Extract Shipping & Product Details
@@ -65,10 +60,10 @@ export default async function handler(req, res) {
       address: `${order.shipping_address.address1}, ${order.shipping_address.city}, ${order.shipping_address.province_code} ${order.shipping_address.zip} ${order.shipping_address.country}`,
       contactNumber: order.shipping_address.phone,
     };
-
+    
     const shippingCountry = order.shipping_address.country;
     const product = order.line_items[0];
-
+    
     const productDetails = {
       sku: product.sku,
       productTitle: product.title + (product.variant_title ? ` - ${product.variant_title}` : ''),
@@ -79,14 +74,14 @@ export default async function handler(req, res) {
 
     const warehouseType = await getWarehouseType(order);
     const supplier = await getProductSupplier(product.product_id);
-
+    
     let emailSent = false;
     let emailHtml = '';
-
+    
     if (shouldSendEmail(warehouseType, supplier, shippingCountry)) {
       emailHtml = generateEmailHtml(shippingDetails, productDetails);
       emailSent = await sendAutomatedEmail(emailHtml, productDetails.poNumber);
-
+      
       // Update order tags if email was sent successfully
       if (emailSent) {
         await updateOrderTags(order.id, 'Test-Ordered');
@@ -103,9 +98,9 @@ export default async function handler(req, res) {
       emailSent,
       action: emailSent ? 'processed' : 'skipped'
     };
-
+    
     console.log(':package: Extracted Order Data:', extractedData);
-
+    
   } catch (error) {
     console.error('Error processing webhook:', error.message);
     // Note: We already sent 200 response to Shopify, 
