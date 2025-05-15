@@ -17,5 +17,8 @@
       "dest": "/api/test-email.js",
       "methods": ["GET"]
     }
-  ]
+  ],
+  "env": {
+    "NODE_OPTIONS": "--experimental-modules --es-module-specifier-resolution=node"
+  }
 }
