@@ -1,24 +1,32 @@
 {
   "name": "order",
   "version": "1.0.0",
-  "description": "",
-  "main": "app.js",
+  "description": "Shopify order webhook handler",
   "type": "module",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon app.js",
-    "start": "node app.js"
+  "engines": {
+    "node": ">=18.x"
   },
-  "keywords": [],
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "vercel dev",
+    "deploy": "vercel deploy --prod"
+  },
+  "keywords": [
+    "shopify",
+    "webhook",
+    "vercel",
+    "serverless"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "axios": "^1.9.0",
-    "body-parser": "^2.2.0",
     "crypto": "^1.0.1",
     "dotenv": "^16.5.0",
-    "express": "^5.1.0",
-    "nodemailer": "^7.0.3",
+    "nodemailer": "^7.0.3"
+  },
+  "devDependencies": {
+    "vercel": "^32.3.0",
     "nodemon": "^3.1.10"
   }
 }

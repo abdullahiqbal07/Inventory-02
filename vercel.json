@@ -1,18 +1,16 @@
 {
   "version": 2,
-  "builds": [{
-    "src": "api/**/*.js",
-    "use": "@vercel/node"
-  }],
+  "builds": [
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    }
+  ],
   "routes": [
     {
       "src": "/webhook/orders/create",
-      "dest": "/api/webhook/orders/create",
+      "dest": "/api/webhook/orders/create.js",
       "methods": ["POST"]
-    },
-    {
-      "src": "/(.*)",
-      "status": 404
     }
   ]
 }
