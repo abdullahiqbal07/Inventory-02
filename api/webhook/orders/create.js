@@ -20,6 +20,26 @@ function shouldSendEmail(warehouseType, supplier, shippingCountry) {
   return isDropShipWarehouse;
 }
 
+export const config = {
+  api: {
+    // IMPORTANT: This disables the default body parsing
+    bodyParser: false,
+  },
+};
+
+// Helper to get raw request body
+const getRawBody = async (req) => {
+  return new Promise((resolve) => {
+    let body = '';
+    req.on('data', (chunk) => {
+      body += chunk.toString();
+    });
+    req.on('end', () => {
+      resolve(body);
+    });
+  });
+};
+
 export default async function handler(req, res) {
   // Only allow POST method for webhooks
   if (req.method !== 'POST') {
@@ -27,28 +47,39 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Verify Shopify HMAC
+    // Get the HMAC header
     const hmacHeader = req.headers['x-shopify-hmac-sha256'];
-    const body = req.body; // Vercel automatically parses JSON by default
+    if (!hmacHeader) {
+      console.error('Missing HMAC header');
+      return res.status(401).json({ error: 'Unauthorized - Missing HMAC' });
+    }
+
+    // Get the raw request body as a string
+    const rawBody = await getRawBody(req);
+    console.log('Raw body received for signature verification');
     
-    // For HMAC verification, we need the raw body
-    const rawBody = JSON.stringify(body);
-    
+    // Verify the HMAC signature
     const generatedHmac = crypto
       .createHmac('sha256', SHOPIFY_SECRET)
       .update(rawBody, 'utf8')
       .digest('base64');
       
+    console.log('Expected:', hmacHeader);
+    console.log('Generated:', generatedHmac);
+      
     if (generatedHmac !== hmacHeader) {
+      console.error('HMAC verification failed');
       return res.status(401).json({ error: 'Unauthorized - Invalid HMAC' });
     }
 
-    const order = body;
+    // Parse the raw body as JSON
+    const order = JSON.parse(rawBody);
     console.log('Order received:', order.id);
 
     // Return 200 response quickly to Shopify
     res.status(200).json({ message: 'Webhook received' });
 
+    // Rest of your order processing logic
     if (order.line_items.length > 1) {
       console.log('Order contains multiple SKUs - processing manually');
       return;
@@ -102,8 +133,11 @@ export default async function handler(req, res) {
     console.log(':package: Extracted Order Data:', extractedData);
     
   } catch (error) {
-    console.error('Error processing webhook:', error.message);
-    // Note: We already sent 200 response to Shopify, 
-    // so this error handling is for logging only
+    console.error('Error processing webhook:', error);
+    
+    // If we haven't sent a response yet, send an error
+    if (!res.headersSent) {
+      return res.status(500).json({ error: 'Internal server error' });
+    }
   }
 }
