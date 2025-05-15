@@ -12,5 +12,11 @@
       "dest": "/api/webhook/orders/create.js",
       "methods": ["POST"]
     }
-  ]
+  ],
+  "functions": {
+    "api/webhook/orders/create.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  }
 }
