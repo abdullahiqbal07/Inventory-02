@@ -77,13 +77,13 @@ export default async function handler(req, res) {
     console.log('Order received:', order.id);
 
     // Return 200 response quickly to Shopify
-    res.status(200).json({ message: 'Webhook received' });
-
+    // res.status(200).json({ message: 'Webhook received' });
+    console.log("Webook recieved")
     // Rest of your order processing logic
-    if (order.line_items.length > 1) {
-      console.log('Order contains multiple SKUs - processing manually');
-      return;
-    }
+    // if (order.line_items.length > 1) {
+    //   console.log('Order contains multiple SKUs - processing manually');
+    //   return;
+    // }
 
     // Extract Shipping & Product Details
     const shippingDetails = {
@@ -112,6 +112,7 @@ export default async function handler(req, res) {
 
 
     if (shouldSendEmail(warehouseType, supplier, shippingCountry)) {
+      console.log("sending email")
       const emailHtml = generateEmailHtml(shippingDetails, productDetails);
       // emailHtml = generateEmailHtml(shippingDetails, productDetails);
       emailSent = await sendAutomatedEmail(emailHtml, productDetails.poNumber);
@@ -137,6 +138,7 @@ export default async function handler(req, res) {
     };
 
     console.log(':package: Extracted Order Data:', extractedData);
+    res.status(200).json({ message: 'All Done' });
 
   } catch (error) {
     console.error('Error processing webhook:', error);
