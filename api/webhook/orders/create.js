@@ -117,7 +117,7 @@ export default async function handler(req, res) {
     // Extract Shipping & Product Details
     const shippingDetails = {
       name: `${order.shipping_address.first_name} ${order.shipping_address.last_name}`,
-      address: `${processedAddress}${processedAddress ? " - " : ""}${order.shipping_address.address1}, ${order.shipping_address.city}, ${order.shipping_address.province_code} ${order.shipping_address.zip} ${order.shipping_address.country}`,
+      address: `${processedAddress?processedAddress:""}${processedAddress ? " - " : ""}${order.shipping_address.address1}, ${order.shipping_address.city}, ${order.shipping_address.province_code} ${order.shipping_address.zip} ${order.shipping_address.country}`,
       contactNumber: order.shipping_address.phone,
     };
 
