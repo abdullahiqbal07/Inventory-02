@@ -117,7 +117,7 @@ export default async function handler(req, res) {
       // emailHtml = generateEmailHtml(shippingDetails, productDetails);
       const emailSent = await sendAutomatedEmail(emailHtml, productDetails.poNumber);
 
-      if (emailSent) {
+      if (emailSent) { 
         await updateOrderTags(order.id, 'Test-Ordered');
         console.log("Email sent successfully, returning 200 response");
       } else {
@@ -133,8 +133,7 @@ export default async function handler(req, res) {
       warehouseType,
       supplier,
       shippingCountry,
-      emailSent,
-      action: emailSent ? 'processed' : 'skipped'
+      
     };
 
     console.log(':package: Extracted Order Data:', extractedData);
