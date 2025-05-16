@@ -86,26 +86,38 @@ export default async function handler(req, res) {
     }
 
     let address = order.shipping_address.address2;
-    let processedAddress = address.toLowerCase().replace(/\s+/g, '');
-    if (/^\d+unit/.test(processedAddress)) {
-      const number = processedAddress.match(/^(\d+)unit/)[1];
-      processedAddress = 'Unit ' + number;
+
+    let processedAddress = "";
+    // Skip processing if address is empty or falsy
+    if (!address || address.trim() === "") {
+      processedAddress = address;
+      // processedAddress would be the original empty string here
+    } else {
+      processedAddress = address.toLowerCase().replace(/\s+/g, '');
+      // Check if the string is in "number first, then unit" format
+      if (/^\d+unit/.test(processedAddress)) {
+        // Extract number and reformat
+        const number = processedAddress.match(/^(\d+)unit/)[1];
+        processedAddress = 'Unit ' + number;
+      }
+      // Check if unit doesn't exist at all
+      else if (!/unit\d*/.test(processedAddress)) {
+        const unitNumberMatch = processedAddress.match(/\d+/);
+        const unitNumber = unitNumberMatch ? unitNumberMatch[0] : '';
+        processedAddress = 'Unit ' + unitNumber;
+      }
+      // Handle standard "unit" followed by number
+      else {
+        processedAddress = processedAddress.replace(/unit(\d+)/, 'Unit $1');
+      }
+      console.log(processedAddress); // Outputs processed result or empty string message
     }
-    else if (!/unit\d*/.test(processedAddress)) {
-      const unitNumberMatch = processedAddress.match(/\d+/);
-      const unitNumber = unitNumberMatch ? unitNumberMatch[0] : '';
-      processedAddress = 'Unit ' + unitNumber;
-    }
-    else {
-      processedAddress = processedAddress.replace(/unit(\d+)/, 'unit $1');
-    }
-    console.log(processedAddress);
 
 
     // Extract Shipping & Product Details
     const shippingDetails = {
       name: `${order.shipping_address.first_name} ${order.shipping_address.last_name}`,
-      address: `${processedAddress} - ${order.shipping_address.address1}, ${order.shipping_address.city}, ${order.shipping_address.province_code} ${order.shipping_address.zip} ${order.shipping_address.country}`,
+      address: `${processedAddress}${processedAddress ? " - " : ""}${order.shipping_address.address1}, ${order.shipping_address.city}, ${order.shipping_address.province_code} ${order.shipping_address.zip} ${order.shipping_address.country}`,
       contactNumber: order.shipping_address.phone,
     };
 
