@@ -82,7 +82,7 @@ export default async function handler(req, res) {
     // Rest of your order processing logic
     if (order.line_items.length > 1) {
       console.log('Order contains multiple SKUs - processing manually');
-      return;
+      return res.status(401).json({ error: 'Order contains multiple SKUs - processing manually' });
     }
 
     let address = order.shipping_address.address2;
