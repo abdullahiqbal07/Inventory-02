@@ -1,9 +1,9 @@
 import crypto from 'crypto';
 import dotenv from 'dotenv';
-import { 
-  getWarehouseType, 
-  getProductSupplier, 
-  updateOrderTags 
+import {
+  getWarehouseType,
+  getProductSupplier,
+  updateOrderTags
 } from '../../../lib/shopify.js';
 import { sendAutomatedEmail, generateEmailHtml } from '../../../lib/email.js';
 
@@ -57,16 +57,16 @@ export default async function handler(req, res) {
     // Get the raw request body as a string
     const rawBody = await getRawBody(req);
     console.log('Raw body received for signature verification');
-    
+
     // Verify the HMAC signature
     const generatedHmac = crypto
       .createHmac('sha256', SHOPIFY_SECRET)
       .update(rawBody, 'utf8')
       .digest('base64');
-      
+
     console.log('Expected:', hmacHeader);
     console.log('Generated:', generatedHmac);
-      
+
     if (generatedHmac !== hmacHeader) {
       console.error('HMAC verification failed');
       return res.status(401).json({ error: 'Unauthorized - Invalid HMAC' });
@@ -91,10 +91,10 @@ export default async function handler(req, res) {
       address: `${order.shipping_address.address1}, ${order.shipping_address.city}, ${order.shipping_address.province_code} ${order.shipping_address.zip} ${order.shipping_address.country}`,
       contactNumber: order.shipping_address.phone,
     };
-    
+
     const shippingCountry = order.shipping_address.country;
     const product = order.line_items[0];
-    
+
     const productDetails = {
       sku: product.sku,
       productTitle: product.title + (product.variant_title ? ` - ${product.variant_title}` : ''),
@@ -105,17 +105,23 @@ export default async function handler(req, res) {
 
     const warehouseType = await getWarehouseType(order);
     const supplier = await getProductSupplier(product.product_id);
-    
-    let emailSent = false;
-    let emailHtml = '';
-    
+
+    // let emailSent = false;
+    // let emailHtml = '';
+
+
+
     if (shouldSendEmail(warehouseType, supplier, shippingCountry)) {
-      emailHtml = generateEmailHtml(shippingDetails, productDetails);
+      const emailHtml = generateEmailHtml(shippingDetails, productDetails);
+      // emailHtml = generateEmailHtml(shippingDetails, productDetails);
       emailSent = await sendAutomatedEmail(emailHtml, productDetails.poNumber);
-      
-      // Update order tags if email was sent successfully
+
       if (emailSent) {
         await updateOrderTags(order.id, 'Test-Ordered');
+        console.log("Email sent successfully, returning 200 response");
+      } else {
+        console.log("Email sending failed, returning 500 response");
+        res.status(500).json({ success: false, message: "Failed to send test email" });
       }
     }
 
@@ -129,12 +135,12 @@ export default async function handler(req, res) {
       emailSent,
       action: emailSent ? 'processed' : 'skipped'
     };
-    
+
     console.log(':package: Extracted Order Data:', extractedData);
-    
+
   } catch (error) {
     console.error('Error processing webhook:', error);
-    
+
     // If we haven't sent a response yet, send an error
     if (!res.headersSent) {
       return res.status(500).json({ error: 'Internal server error' });
