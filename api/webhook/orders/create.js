@@ -115,7 +115,7 @@ export default async function handler(req, res) {
       console.log("sending email")
       const emailHtml = generateEmailHtml(shippingDetails, productDetails);
       // emailHtml = generateEmailHtml(shippingDetails, productDetails);
-      emailSent = await sendAutomatedEmail(emailHtml, productDetails.poNumber);
+      const emailSent = await sendAutomatedEmail(emailHtml, productDetails.poNumber);
 
       if (emailSent) {
         await updateOrderTags(order.id, 'Test-Ordered');
