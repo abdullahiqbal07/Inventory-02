@@ -89,12 +89,12 @@ export default async function handler(req, res) {
     let processedAddress = address.toLowerCase().replace(/\s+/g, '');
     if (/^\d+unit/.test(processedAddress)) {
       const number = processedAddress.match(/^(\d+)unit/)[1];
-      processedAddress = 'unit ' + number;
+      processedAddress = 'Unit ' + number;
     }
     else if (!/unit\d*/.test(processedAddress)) {
       const unitNumberMatch = processedAddress.match(/\d+/);
       const unitNumber = unitNumberMatch ? unitNumberMatch[0] : '';
-      processedAddress = 'unit ' + unitNumber;
+      processedAddress = 'Unit ' + unitNumber;
     }
     else {
       processedAddress = processedAddress.replace(/unit(\d+)/, 'unit $1');
