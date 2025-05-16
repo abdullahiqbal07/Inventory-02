@@ -80,15 +80,32 @@ export default async function handler(req, res) {
     // res.status(200).json({ message: 'Webhook received' });
     console.log("Webook recieved")
     // Rest of your order processing logic
-    // if (order.line_items.length > 1) {
-    //   console.log('Order contains multiple SKUs - processing manually');
-    //   return;
-    // }
+    if (order.line_items.length > 1) {
+      console.log('Order contains multiple SKUs - processing manually');
+      return;
+    }
+
+    let address = order.shipping_address.address2;
+    let processedAddress = address.toLowerCase().replace(/\s+/g, '');
+    if (/^\d+unit/.test(processedAddress)) {
+      const number = processedAddress.match(/^(\d+)unit/)[1];
+      processedAddress = 'unit ' + number;
+    }
+    else if (!/unit\d*/.test(processedAddress)) {
+      const unitNumberMatch = processedAddress.match(/\d+/);
+      const unitNumber = unitNumberMatch ? unitNumberMatch[0] : '';
+      processedAddress = 'unit ' + unitNumber;
+    }
+    else {
+      processedAddress = processedAddress.replace(/unit(\d+)/, 'unit $1');
+    }
+    console.log(processedAddress);
+
 
     // Extract Shipping & Product Details
     const shippingDetails = {
       name: `${order.shipping_address.first_name} ${order.shipping_address.last_name}`,
-      address: `${order.shipping_address.address1}, ${order.shipping_address.city}, ${order.shipping_address.province_code} ${order.shipping_address.zip} ${order.shipping_address.country}`,
+      address: `${processedAddress}, ${order.shipping_address.address1}, ${order.shipping_address.city}, ${order.shipping_address.province_code} ${order.shipping_address.zip} ${order.shipping_address.country}`,
       contactNumber: order.shipping_address.phone,
     };
 
@@ -99,7 +116,7 @@ export default async function handler(req, res) {
       sku: product.sku,
       productTitle: product.title + (product.variant_title ? ` - ${product.variant_title}` : ''),
       quantity: product.quantity,
-      poNumber: order.order_number.toString(),
+      poNumber: order.name,
       price: product.price
     };
 
@@ -117,7 +134,7 @@ export default async function handler(req, res) {
       // emailHtml = generateEmailHtml(shippingDetails, productDetails);
       const emailSent = await sendAutomatedEmail(emailHtml, productDetails.poNumber);
 
-      if (emailSent) { 
+      if (emailSent) {
         await updateOrderTags(order.id, 'Test-Ordered');
         console.log("Email sent successfully, returning 200 response");
       } else {
@@ -133,7 +150,7 @@ export default async function handler(req, res) {
       warehouseType,
       supplier,
       shippingCountry,
-      
+
     };
 
     console.log(':package: Extracted Order Data:', extractedData);
