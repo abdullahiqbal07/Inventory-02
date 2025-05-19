@@ -7,7 +7,7 @@ import {
   riskOrders,
   checkAddressIssue,
 } from '../../../lib/shopify.js';
-import { sendAutomatedEmail, generateEmailHtml } from '../../../lib/email.js';
+import { sendAutomatedEmail, generateEmailHtml, generateWarningEmailHtml, sendAutomatedEmailWarning, sendAutomatedEmailRisk, generateEmailHtmlRisk } from '../../../lib/email.js';
 
 dotenv.config();
 const SHOPIFY_SECRET = process.env.SHOPIFY_WEBHOOK_SECRET;
@@ -136,10 +136,18 @@ export default async function handler(req, res) {
 
     const score = await riskOrders(order);
     if (score > 0.5) {
-
+      const emailHtml = generateEmailHtmlRisk(shippingDetails, productDetails);
+      const emailSent = await sendAutomatedEmailRisk(emailHtml, productDetails.poNumber);
+      return res.status(200).json({ message: "Failed to send test email" });
     }
 
     const addressIssue = await checkAddressIssue(order);
+
+    if (addressIssue === 'WARNING') {
+      const emailHtml = generateWarningEmailHtml(shippingDetails, productDetails);
+      const emailSent = await sendAutomatedEmailWarning(emailHtml, productDetails.poNumber);
+      return res.status(200).json({ message: "Failed to send test email" });
+    }
 
     const warehouseType = await getWarehouseType(order);
     const supplier = await getProductSupplier(product.product_id);
@@ -160,7 +168,7 @@ export default async function handler(req, res) {
         console.log("Email sent successfully, returning 200 response");
       } else {
         console.log("Email sending failed, returning 500 response");
-        res.status(500).json({ success: false, message: "Failed to send test email" });
+        return es.status(500).json({ success: false, message: "Failed to send test email" });
       }
     }
 
