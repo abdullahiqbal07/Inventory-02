@@ -110,7 +110,7 @@ export default async function handler(req, res) {
       else {
         processedAddress = processedAddress.replace(/unit(\d+)/, 'Unit $1');
       }
-      console.log(processedAddress); // Outputs processed result or empty string message
+      console.log(processedAddress);
     }
 
 
