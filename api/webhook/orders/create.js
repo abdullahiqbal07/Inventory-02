@@ -3,7 +3,9 @@ import dotenv from 'dotenv';
 import {
   getWarehouseType,
   getProductSupplier,
-  updateOrderTags
+  updateOrderTags,
+  riskOrders,
+  checkAddressIssue,
 } from '../../../lib/shopify.js';
 import { sendAutomatedEmail, generateEmailHtml } from '../../../lib/email.js';
 
@@ -131,6 +133,13 @@ export default async function handler(req, res) {
       poNumber: order.name,
       price: product.price
     };
+
+    const score = await riskOrders(order);
+    if (score > 0.5) {
+
+    }
+
+    const addressIssue = await checkAddressIssue(order);
 
     const warehouseType = await getWarehouseType(order);
     const supplier = await getProductSupplier(product.product_id);
