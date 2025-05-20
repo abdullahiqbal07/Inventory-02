@@ -7,7 +7,7 @@ import {
   riskOrders,
   checkAddressIssue,
 } from '../../../lib/shopify.js';
-import { sendAutomatedEmail, generateEmailHtml } from '../../../lib/email.js';
+import { sendAutomatedEmail, generateEmailHtml, generateEmailHtmlRisk, sendAutomatedEmailRisk, generateWarningEmailHtml, sendAutomatedEmailWarning } from '../../../lib/email.js';
 
 dotenv.config();
 const SHOPIFY_SECRET = process.env.SHOPIFY_WEBHOOK_SECRET;
@@ -167,10 +167,18 @@ export default async function handler(req, res) {
     // Risk and address checks
     const score = await riskOrders(order);
     if (score > 0.5) {
-      // Handle risky orders
+      const emailHtml = generateEmailHtmlRisk(shippingDetails, productDetails);
+      const emailSent = await sendAutomatedEmailRisk(emailHtml, productDetails.poNumber);
+      return res.status(200).json({ message: "Failed to send test email" });
     }
 
+
     const addressIssue = await checkAddressIssue(order);
+    if (addressIssue === 'WARNING') {
+      const emailHtml = generateWarningEmailHtml(shippingDetails, productDetails);
+      const emailSent = await sendAutomatedEmailWarning(emailHtml, productDetails.poNumber);
+      return res.status(200).json({ message: "Failed to send test email" });
+    }
 
     // Final Output for logging
     const extractedData = {
