@@ -12,14 +12,34 @@ import { sendAutomatedEmail, generateEmailHtml } from '../../../lib/email.js';
 dotenv.config();
 const SHOPIFY_SECRET = process.env.SHOPIFY_WEBHOOK_SECRET;
 
-// Helper function to determine if email should be sent
-function shouldSendEmail(warehouseType, supplier, shippingCountry) {
+
+function shouldSendEmailForProduct(warehouseType, supplier, shippingCountry) {
   const isCanadaShipping = shippingCountry === "Canada";
   if (!isCanadaShipping) return false;
   const isBestBuySupplier = supplier === "Best Buy";
   if (!isBestBuySupplier) return false;
   const isDropShipWarehouse = warehouseType === "A - Dropship (Abbey Lane)";
   return isDropShipWarehouse;
+}
+
+// Helper function to check if all products meet the criteria
+async function checkAllProducts(order) {
+  const shippingCountry = order.shipping_address.country;
+  const isCanadaShipping = shippingCountry === "Canada";
+
+  if (!isCanadaShipping) return false;
+
+  // Check each product in the order
+  for (const product of order.line_items) {
+    const warehouseType = await getWarehouseType(order, product.product_id);
+    const supplier = await getProductSupplier(product.product_id);
+
+    if (!shouldSendEmailForProduct(warehouseType, supplier, shippingCountry)) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 export const config = {
@@ -79,99 +99,89 @@ export default async function handler(req, res) {
     console.log('Order received:', order.id);
 
     // Return 200 response quickly to Shopify
-    // res.status(200).json({ message: 'Webhook received' });
-    console.log("Webook recieved")
-    // Rest of your order processing logic
-    if (order.line_items.length > 1) {
-      console.log('Order contains multiple SKUs - processing manually');
-      return res.status(401).json({ error: 'Order contains multiple SKUs - processing manually' });
-    }
+    console.log("Webhook received");
 
+    // Process address
     let address = order.shipping_address.address2;
-
     let processedAddress = "";
-    // Skip processing if address is empty or falsy
+
     if (!address || address.trim() === "") {
       processedAddress = address;
-      // processedAddress would be the original empty string here
     } else {
       processedAddress = address.toLowerCase().replace(/\s+/g, '');
-      // Check if the string is in "number first, then unit" format
       if (/^\d+unit/.test(processedAddress)) {
-        // Extract number and reformat
         const number = processedAddress.match(/^(\d+)unit/)[1];
         processedAddress = 'Unit ' + number;
       }
-      // Check if unit doesn't exist at all
       else if (!/unit\d*/.test(processedAddress)) {
         const unitNumberMatch = processedAddress.match(/\d+/);
         const unitNumber = unitNumberMatch ? unitNumberMatch[0] : '';
         processedAddress = 'Unit ' + unitNumber;
       }
-      // Handle standard "unit" followed by number
       else {
         processedAddress = processedAddress.replace(/unit(\d+)/, 'Unit $1');
       }
       console.log(processedAddress);
     }
 
-
-    // Extract Shipping & Product Details
+    // Extract Shipping Details
     const shippingDetails = {
       name: `${order.shipping_address.first_name} ${order.shipping_address.last_name}`,
       address: `${order.shipping_address.address1}, ${processedAddress ? processedAddress : ""}${processedAddress ? ", " : ""} ${order.shipping_address.city}, ${order.shipping_address.province_code} ${order.shipping_address.zip} ${order.shipping_address.country}`,
       contactNumber: order.shipping_address.phone,
+      poNumber: order.name,
     };
 
     const shippingCountry = order.shipping_address.country;
-    const product = order.line_items[0];
 
-    const productDetails = {
-      sku: product.sku,
-      productTitle: product.title + (product.variant_title ? ` - ${product.variant_title}` : ''),
-      quantity: product.quantity,
-      poNumber: order.name,
-      price: product.price
-    };
+    // Check if all products meet the criteria
+    const allProductsQualify = await checkAllProducts(order);
 
+    if (allProductsQualify) {
+      console.log("All products qualify for email sending");
+
+      // Prepare product details for all items
+      const productDetailsList = order.line_items.map(product => ({
+        sku: product.sku,
+        productTitle: product.title + (product.variant_title ? ` - ${product.variant_title}` : ''),
+        quantity: product.quantity,
+
+        price: product.price
+      }));
+
+      // Generate email with all products
+      const emailHtml = generateEmailHtml(shippingDetails, productDetailsList);
+      const emailSent = await sendAutomatedEmail(emailHtml, order.name);
+
+      if (emailSent) {
+        await updateOrderTags(order.id, 'Test-Ordered');
+        console.log("Email sent successfully for multiple products");
+      } else {
+        console.log("Email sending failed for multiple products");
+        res.status(500).json({ success: false, message: "Failed to send test email" });
+      }
+    } else {
+      console.log("Not all products qualify for email sending");
+    }
+
+    // Risk and address checks
     const score = await riskOrders(order);
     if (score > 0.5) {
-
+      // Handle risky orders
     }
 
     const addressIssue = await checkAddressIssue(order);
 
-    const warehouseType = await getWarehouseType(order);
-    const supplier = await getProductSupplier(product.product_id);
-
-    // let emailSent = false;
-    // let emailHtml = '';
-
-
-
-    if (shouldSendEmail(warehouseType, supplier, shippingCountry)) {
-      console.log("sending email")
-      const emailHtml = generateEmailHtml(shippingDetails, productDetails);
-      // emailHtml = generateEmailHtml(shippingDetails, productDetails);
-      const emailSent = await sendAutomatedEmail(emailHtml, productDetails.poNumber);
-
-      if (emailSent) {
-        await updateOrderTags(order.id, 'Test-Ordered');
-        console.log("Email sent successfully, returning 200 response");
-      } else {
-        console.log("Email sending failed, returning 500 response");
-        res.status(500).json({ success: false, message: "Failed to send test email" });
-      }
-    }
-
     // Final Output for logging
     const extractedData = {
       shippingDetails,
-      productDetails,
-      warehouseType,
-      supplier,
+      productDetails: order.line_items.map(product => ({
+        sku: product.sku,
+        title: product.title,
+        quantity: product.quantity
+      })),
       shippingCountry,
-
+      allProductsQualify
     };
 
     console.log(':package: Extracted Order Data:', extractedData);
