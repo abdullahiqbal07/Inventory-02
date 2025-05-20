@@ -149,6 +149,21 @@ export default async function handler(req, res) {
         price: product.price
       }));
 
+      const score = await riskOrders(order);
+      if (score > 0.5) {
+        const emailHtml = generateEmailHtmlRisk(shippingDetails, productDetailsList);
+        const emailSent = await sendAutomatedEmailRisk(emailHtml, shippingDetails.poNumber);
+        return res.status(200).json({ message: "Failed to send test email" });
+      }
+
+
+      const addressIssue = await checkAddressIssue(order);
+      if (addressIssue === 'WARNING') {
+        const emailHtml = generateWarningEmailHtml(shippingDetails, productDetailsList);
+        const emailSent = await sendAutomatedEmailWarning(emailHtml, shippingDetails.poNumber);
+        return res.status(200).json({ message: "Failed to send test email" });
+      }
+
       // Generate email with all products
       const emailHtml = generateEmailHtml(shippingDetails, productDetailsList);
       const emailSent = await sendAutomatedEmail(emailHtml, order.name);
@@ -164,21 +179,6 @@ export default async function handler(req, res) {
       console.log("Not all products qualify for email sending");
     }
 
-    // Risk and address checks
-    const score = await riskOrders(order);
-    if (score > 0.5) {
-      const emailHtml = generateEmailHtmlRisk(shippingDetails, productDetails);
-      const emailSent = await sendAutomatedEmailRisk(emailHtml, productDetails.poNumber);
-      return res.status(200).json({ message: "Failed to send test email" });
-    }
-
-
-    const addressIssue = await checkAddressIssue(order);
-    if (addressIssue === 'WARNING') {
-      const emailHtml = generateWarningEmailHtml(shippingDetails, productDetails);
-      const emailSent = await sendAutomatedEmailWarning(emailHtml, productDetails.poNumber);
-      return res.status(200).json({ message: "Failed to send test email" });
-    }
 
     // Final Output for logging
     const extractedData = {
