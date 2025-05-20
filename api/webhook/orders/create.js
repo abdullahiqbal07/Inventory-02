@@ -164,7 +164,7 @@ export default async function handler(req, res) {
       const emailSent = await sendAutomatedEmail(emailHtml, productDetails.poNumber);
 
       if (emailSent) {
-        await updateOrderTags(order.id, 'Test-Ordered');
+        await updateOrderTags(order.id, 'JARVIS - Ordered');
         console.log("Email sent successfully, returning 200 response");
       } else {
         console.log("Email sending failed, returning 500 response");
