@@ -145,8 +145,9 @@ export default async function handler(req, res) {
         sku: product.sku,
         productTitle: product.title + (product.variant_title ? ` - ${product.variant_title}` : ''),
         quantity: product.quantity,
-
-        price: product.price
+        price: Number(
+          ((Number(product.price) * product.quantity) - Number(product.total_discount)).toFixed(2)
+        )
       }));
 
       const score = await riskOrders(order);
