@@ -31,7 +31,7 @@ async function checkAllProducts(order) {
 
   // Check each product in the order
   for (const product of order.line_items) {
-    const warehouseType = await getWarehouseType(order, product.product_id);
+    const warehouseType = await getWarehouseType(order, product.variant_id);
     const supplier = await getProductSupplier(product.product_id);
 
     if (!shouldSendEmailForProduct(warehouseType, supplier, shippingCountry)) {
