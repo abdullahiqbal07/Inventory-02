@@ -16,30 +16,39 @@ const SHOPIFY_SECRET = process.env.SHOPIFY_WEBHOOK_SECRET;
 function shouldSendEmailForProduct(warehouseType, supplier, shippingCountry) {
   const isCanadaShipping = shippingCountry === "Canada";
   if (!isCanadaShipping) return false;
-  const isBestBuySupplier = supplier === "Best Buy";
+  const isBestBuySupplier = supplier === "Best Buy" || supplier === "Drive DeVilbiss Healthcare" || supplier === "Mobb Health Care" || supplier === "Medline Canada" || supplier === "Handicare" || supplier === "Sam Medical";
   if (!isBestBuySupplier) return false;
   const isDropShipWarehouse = warehouseType === "A - Dropship (Abbey Lane)";
   return isDropShipWarehouse;
 }
 
 // Helper function to check if all products meet the criteria
+
 async function checkAllProducts(order) {
   const shippingCountry = order.shipping_address.country;
   const isCanadaShipping = shippingCountry === "Canada";
-
-  if (!isCanadaShipping) return false;
-
-  // Check each product in the order
+  if (!isCanadaShipping) return { qualifies: false, supplier: null };
+  const allowedSuppliers = ["Best Buy", "Drive DeVilbiss Healthcare", "Mobb Health Care", "Medline Canada", "Handicare", "Sam Medical"];
+  const suppliersSet = new Set();
   for (const product of order.line_items) {
     const warehouseType = await getWarehouseType(order, product.variant_id);
     const supplier = await getProductSupplier(product.product_id);
-
+    suppliersSet.add(supplier);
     if (!shouldSendEmailForProduct(warehouseType, supplier, shippingCountry)) {
-      return false;
+      return { qualifies: false, supplier: null };
     }
   }
-
-  return true;
+  // Ensure all products have the same supplier and it's one of the allowed suppliers
+  if (suppliersSet.size !== 1) {
+    console.log("Products have mixed suppliers:", Array.from(suppliersSet));
+    return { qualifies: false, supplier: null };
+  }
+  const [supplierName] = suppliersSet;
+  if (!allowedSuppliers.includes(supplierName)) {
+    console.log(`Supplier '${supplierName}' not allowed for email sending`);
+    return { qualifies: false, supplier: null };
+  }
+  return { qualifies: true, supplier: supplierName };
 }
 
 export const config = {
@@ -135,16 +144,20 @@ export default async function handler(req, res) {
     const shippingCountry = order.shipping_address.country;
 
     // Check if all products meet the criteria
-    const allProductsQualify = await checkAllProducts(order);
+    const { qualifies: allProductsQualify, supplier } = await checkAllProducts(order);
 
     if (allProductsQualify) {
       console.log("All products qualify for email sending");
+      console.log(typeof (order.line_items[0].quantity));
+      console.log(typeof (order.line_items[0].price));
+      console.log(typeof (order.line_items[0].total_discount));
 
       // Prepare product details for all items
       const productDetailsList = order.line_items.map(product => ({
         sku: product.sku,
         productTitle: product.title + (product.variant_title ? ` - ${product.variant_title}` : ''),
         quantity: product.quantity,
+
         price: Number(
           ((Number(product.price) * product.quantity) - Number(product.total_discount)).toFixed(2)
         )
@@ -166,8 +179,8 @@ export default async function handler(req, res) {
       }
 
       // Generate email with all products
-      const emailHtml = generateEmailHtml(shippingDetails, productDetailsList);
-      const emailSent = await sendAutomatedEmail(emailHtml, order.name);
+      const emailHtml = generateEmailHtml(shippingDetails, productDetailsList, supplier);
+      const emailSent = await sendAutomatedEmail(emailHtml, order.name, supplier);
 
       if (emailSent) {
         await updateOrderTags(order.id, 'JARVIS - Ordered');
